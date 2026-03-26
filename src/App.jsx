@@ -163,15 +163,20 @@ function ICard({ title, role, children }) {
 function SuccessPopup({ order, onClose, onView }) {
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
-      <div style={{ background: '#fff', borderRadius: 16, padding: '32px 28px', width: 400, boxShadow: '0 24px 60px rgba(0,0,0,.2)', textAlign: 'center' }}>
+      <div style={{ background: '#fff', borderRadius: 16, padding: '32px 28px', width: 440, boxShadow: '0 24px 60px rgba(0,0,0,.2)', textAlign: 'center' }}>
         <div style={{ width: 56, height: 56, background: '#d4f0df', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', fontSize: 26 }}>✓</div>
         <div style={{ fontSize: 18, fontWeight: 600, marginBottom: 6 }}>Order Created!</div>
-        <div style={{ fontSize: 13, color: '#888', marginBottom: 4 }}>{order.customer}</div>
-        <div style={{ fontSize: 13, color: '#888', marginBottom: 4 }}>{order.product}</div>
+        <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 4 }}>{order.customer}</div>
+        <div style={{ fontSize: 13, color: '#888', marginBottom: 4 }}>{order.product} · {order.qty} km</div>
         <div style={{ display: 'inline-block', background: '#f5f3ee', borderRadius: 6, padding: '4px 12px', fontSize: 12, fontFamily: 'monospace', color: '#c8401a', fontWeight: 600, marginBottom: 20 }}>{order.id}</div>
-        <div style={{ fontSize: 13, color: '#888', marginBottom: 24 }}>
-          Status: <strong>Tender Received</strong> — awaiting production rate from <strong>Suresh</strong>
+
+        <div style={{ background: '#fff8f6', border: '1px solid #f4c4b0', borderRadius: 10, padding: '14px 16px', marginBottom: 20, textAlign: 'left' }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: '#c8401a', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '.04em' }}>Next Step — Action Required from You</div>
+          <div style={{ fontSize: 13, color: '#555', lineHeight: 1.6 }}>
+            Click <strong>"View Order"</strong> → then click <strong>"Mark: Awaiting Prod Rate →"</strong> to send it to Production for costing.
+          </div>
         </div>
+
         <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
           <Btn sm onClick={onClose}>Back to Orders</Btn>
           <Btn primary sm onClick={onView}>View Order →</Btn>
@@ -490,6 +495,16 @@ function Detail({ order: o, user, upd, addLog, al, setAl, alEv, setAlEv, back })
           <Btn primary onClick={() => upd(o.id, { status: nk }, `→ ${ST[nk]?.lbl}`)}>Mark: {ST[nk]?.lbl} →</Btn>
         )}
       </div>
+      {isActor && nk && (
+        <div style={{ background: '#fff0eb', border: '1px solid #f4c4b0', borderRadius: 8, padding: '10px 14px', marginBottom: 10, fontSize: 13, color: '#c8401a' }}>
+          <strong>Action needed from you:</strong> Click the button above to advance this order to <strong>"{ST[nk]?.lbl}"</strong>.
+        </div>
+      )}
+      {!isActor && m.own && (
+        <div style={{ background: '#f5f3ee', border: '0.5px solid #e2ddd4', borderRadius: 8, padding: '10px 14px', marginBottom: 10, fontSize: 13, color: '#888' }}>
+          Waiting on <strong style={{ color: RC[m.own] }}>{ROLES[m.own]}</strong> to take action on this order.
+        </div>
+      )}
       <StageBar status={o.status} height={5} />
       <div style={{ display: 'flex', borderBottom: '0.5px solid #e2ddd4', marginBottom: 18 }}>
         {tabs.map(t => (
