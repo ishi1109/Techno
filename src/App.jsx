@@ -159,6 +159,28 @@ function ICard({ title, role, children }) {
   )
 }
 
+// ── SUCCESS POPUP ──────────────────────────────────────────────────────────────
+function SuccessPopup({ order, onClose, onView }) {
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
+      <div style={{ background: '#fff', borderRadius: 16, padding: '32px 28px', width: 400, boxShadow: '0 24px 60px rgba(0,0,0,.2)', textAlign: 'center' }}>
+        <div style={{ width: 56, height: 56, background: '#d4f0df', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', fontSize: 26 }}>✓</div>
+        <div style={{ fontSize: 18, fontWeight: 600, marginBottom: 6 }}>Order Created!</div>
+        <div style={{ fontSize: 13, color: '#888', marginBottom: 4 }}>{order.customer}</div>
+        <div style={{ fontSize: 13, color: '#888', marginBottom: 4 }}>{order.product}</div>
+        <div style={{ display: 'inline-block', background: '#f5f3ee', borderRadius: 6, padding: '4px 12px', fontSize: 12, fontFamily: 'monospace', color: '#c8401a', fontWeight: 600, marginBottom: 20 }}>{order.id}</div>
+        <div style={{ fontSize: 13, color: '#888', marginBottom: 24 }}>
+          Status: <strong>Tender Received</strong> — awaiting production rate from <strong>Suresh</strong>
+        </div>
+        <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
+          <Btn sm onClick={onClose}>Back to Orders</Btn>
+          <Btn primary sm onClick={onView}>View Order →</Btn>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── NEW ORDER FORM ─────────────────────────────────────────────────────────────
 function NewOrderForm({ onSave, onCancel }) {
   const [customer, setCustomer] = useState('')
@@ -352,9 +374,10 @@ function Dashboard({ orders, al, user, pending, go, openOrder }) {
 
 // ── ORDERS LIST ────────────────────────────────────────────────────────────────
 function Orders({ orders, user, setOrders, open, addLog }) {
-  const [showNew, setShowNew] = useState(false)
-  const [q, setQ]             = useState('')
-  const [filter, setFilter]   = useState('all')
+  const [showNew, setShowNew]      = useState(false)
+  const [successOrder, setSuccess] = useState(null)
+  const [q, setQ]                  = useState('')
+  const [filter, setFilter]        = useState('all')
   const canCreate = ['admin','marketing'].includes(user.role)
 
   const create = ({ customer, product, qty, date }) => {
@@ -367,6 +390,7 @@ function Orders({ orders, user, setOrders, open, addLog }) {
     setOrders(os => [o, ...os])
     addLog(o.id, 'Order Created')
     setShowNew(false)
+    setSuccess(o)
   }
 
   const filtered = orders.filter(o => {
@@ -377,6 +401,13 @@ function Orders({ orders, user, setOrders, open, addLog }) {
 
   return (
     <div>
+      {successOrder && (
+        <SuccessPopup
+          order={successOrder}
+          onClose={() => setSuccess(null)}
+          onView={() => { open(successOrder.id); setSuccess(null) }}
+        />
+      )}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
         <div>
           <div style={{ fontSize: 24, fontWeight: 500 }}>Orders</div>
