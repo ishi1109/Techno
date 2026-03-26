@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState } from 'react'
 
 const USERS = [
   { id: 'u1', name: 'Ishita (Admin)', role: 'admin',      pw: 'admin123' },
@@ -36,6 +36,7 @@ const SEED_ORDERS = [
     dispatches: [], invoice: null, log: [],
   },
   {
+    // This one shows correctly in Production's dashboard
     id: 'ORD-003', customer: 'CESC Kolkata', product: 'AAAC Weasel 7/2.59mm', qty: 30,
     status: 'costing_pending_production', tender: '2025-03-01',
     costing: { pr: null, mr: null, al: null },
@@ -50,11 +51,10 @@ const RC = { admin: '#1a1a2e', marketing: '#0f4c75', production: '#1b6b3a', disp
 const RB = { admin: '#e8e8f0', marketing: '#dceeff', production: '#d4f0df', dispatch: '#ffe8d6', accounts: '#f3d8f0' }
 
 const ST = {
-  tender_received:            { lbl: 'Tender Received',        own: null,         c: '#78909c' }, // info only
   costing_pending_production: { lbl: 'Awaiting Prod Rate',     own: 'production', c: '#1b6b3a' },
   costing_pending_marketing:  { lbl: 'Awaiting Final Rate',    own: 'marketing',  c: '#0f4c75' },
-  order_confirmed:            { lbl: 'Order Confirmed',        own: 'marketing',  c: '#0f4c75' }, // Marketing enters PO
-  al_arranging:               { lbl: 'Arrange AL',             own: 'production', c: '#1b4332' }, // Production arranges AL
+  order_confirmed:            { lbl: 'PO Pending',             own: 'marketing',  c: '#0f4c75' },
+  al_arranging:               { lbl: 'Arrange AL',             own: 'production', c: '#1b4332' },
   production:                 { lbl: 'In Production',          own: 'production', c: '#2e7d32' },
   ready_dispatch:             { lbl: 'Ready for Dispatch',     own: 'dispatch',   c: '#7b2d00' },
   dispatched:                 { lbl: 'Dispatched',             own: 'accounts',   c: '#4a1942' },
@@ -68,9 +68,25 @@ const fmtD = d => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', 
 const uid  = () => Math.random().toString(36).slice(2, 7)
 const tod  = () => new Date().toISOString().split('T')[0]
 
+// ── VERSION CHECK — bumping this clears all old localStorage automatically ──
+const DATA_VERSION = 'v6'
+if (localStorage.getItem('tf_version') !== DATA_VERSION) {
+  ['tf_orders','tf_al','tf_alev','tf_audit'].forEach(k => localStorage.removeItem(k))
+  localStorage.setItem('tf_version', DATA_VERSION)
+}
+
 function useLS(k, iv) {
-  const [v, sv] = useState(() => { try { const s = localStorage.getItem(k); return s ? JSON.parse(s) : iv } catch { return iv } })
-  const set = useCallback(x => { const nv = typeof x === 'function' ? x(v) : x; sv(nv); try { localStorage.setItem(k, JSON.stringify(nv)) } catch {} }, [v])
+  const [v, sv] = useState(() => {
+    try { const s = localStorage.getItem(k); return s ? JSON.parse(s) : iv }
+    catch { return iv }
+  })
+  const set = (x) => {
+    sv(prev => {
+      const nv = typeof x === 'function' ? x(prev) : x
+      try { localStorage.setItem(k, JSON.stringify(nv)) } catch {}
+      return nv
+    })
+  }
   return [v, set]
 }
 
@@ -556,7 +572,7 @@ function OvTab({ o, user, upd }) {
           <div style={{ marginTop: 10, paddingTop: 10, borderTop: '0.5px solid #f0ede8' }}>
             <Fg label="PO Number"><input style={S.inp} value={po} onChange={e => setPo(e.target.value)} placeholder="e.g. PO/2025/001" /></Fg>
             <Fg label="Date"><input style={S.inp} type="date" value={pod} onChange={e => setPod(e.target.value)} /></Fg>
-            <Btn primary sm onClick={() => { if (!po) return; upd(o.id, { po: { no: po, date: pod }, status: 'order_confirmed' }, 'Order confirmed') }}>Confirm Order</Btn>
+            <Btn primary sm onClick={() => { if (!po) return; upd(o.id, { po: { no: po, date: pod }, status: 'al_arranging' }, 'PO confirmed — sent to Production for AL') }}>Confirm PO → Send to Production</Btn>
           </div>
         )}
       </ICard>
@@ -885,9 +901,20 @@ function AuditPage({ audit }) {
 
 // ── ADMIN PAGE ─────────────────────────────────────────────────────────────────
 function AdminPage({ orders, setOrders, al, setAl, user, addLog }) {
+  const resetAll = () => {
+    if (!confirm('Reset ALL data to defaults? This will clear all orders and AL events.')) return
+    localStorage.removeItem('tf_orders')
+    localStorage.removeItem('tf_al')
+    localStorage.removeItem('tf_alev')
+    localStorage.removeItem('tf_audit')
+    window.location.reload()
+  }
   return (
     <div>
-      <div style={{ fontSize: 24, fontWeight: 500, marginBottom: 18 }}>Admin Panel</div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
+        <div style={{ fontSize: 24, fontWeight: 500 }}>Admin Panel</div>
+        <Btn danger sm onClick={resetAll}>⚠ Reset All Data</Btn>
+      </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 16 }}>
         <div style={S.card}>
           <div style={{ fontWeight: 500, fontSize: 14, marginBottom: 12 }}>AL Stock Override</div>
