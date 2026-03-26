@@ -50,11 +50,11 @@ const RC = { admin: '#1a1a2e', marketing: '#0f4c75', production: '#1b6b3a', disp
 const RB = { admin: '#e8e8f0', marketing: '#dceeff', production: '#d4f0df', dispatch: '#ffe8d6', accounts: '#f3d8f0' }
 
 const ST = {
-  tender_received:            { lbl: 'Tender Received',        own: 'marketing',  c: '#0f4c75' },
+  tender_received:            { lbl: 'Tender Received',        own: null,         c: '#78909c' }, // info only
   costing_pending_production: { lbl: 'Awaiting Prod Rate',     own: 'production', c: '#1b6b3a' },
   costing_pending_marketing:  { lbl: 'Awaiting Final Rate',    own: 'marketing',  c: '#0f4c75' },
-  order_confirmed:            { lbl: 'Order Confirmed',        own: 'production', c: '#1b5e20' },
-  al_arranging:               { lbl: 'Arranging AL',           own: 'production', c: '#1b4332' },
+  order_confirmed:            { lbl: 'Order Confirmed',        own: 'marketing',  c: '#0f4c75' }, // Marketing enters PO
+  al_arranging:               { lbl: 'Arrange AL',             own: 'production', c: '#1b4332' }, // Production arranges AL
   production:                 { lbl: 'In Production',          own: 'production', c: '#2e7d32' },
   ready_dispatch:             { lbl: 'Ready for Dispatch',     own: 'dispatch',   c: '#7b2d00' },
   dispatched:                 { lbl: 'Dispatched',             own: 'accounts',   c: '#4a1942' },
@@ -170,10 +170,10 @@ function SuccessPopup({ order, onClose, onView }) {
         <div style={{ fontSize: 13, color: '#888', marginBottom: 4 }}>{order.product} · {order.qty} km</div>
         <div style={{ display: 'inline-block', background: '#f5f3ee', borderRadius: 6, padding: '4px 12px', fontSize: 12, fontFamily: 'monospace', color: '#c8401a', fontWeight: 600, marginBottom: 20 }}>{order.id}</div>
 
-        <div style={{ background: '#fff8f6', border: '1px solid #f4c4b0', borderRadius: 10, padding: '14px 16px', marginBottom: 20, textAlign: 'left' }}>
-          <div style={{ fontSize: 12, fontWeight: 600, color: '#c8401a', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '.04em' }}>Next Step — Action Required from You</div>
-          <div style={{ fontSize: 13, color: '#555', lineHeight: 1.6 }}>
-            Click <strong>"View Order"</strong> → then click <strong>"Mark: Awaiting Prod Rate →"</strong> to send it to Production for costing.
+        <div style={{ background: '#d4f0df', border: '1px solid #a8d8b9', borderRadius: 10, padding: '14px 16px', marginBottom: 20, textAlign: 'left' }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: '#1b6b3a', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '.04em' }}>✓ Sent to Production</div>
+          <div style={{ fontSize: 13, color: '#2d5a3d', lineHeight: 1.6 }}>
+            Production (Suresh) will now see this order in their dashboard and submit a rate + AL requirement.
           </div>
         </div>
 
@@ -344,17 +344,24 @@ function Dashboard({ orders, al, user, pending, go, openOrder }) {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
         <div>
           <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span>Pending on you <span style={{ color: '#c8401a' }}>({pending.length})</span></span>
+            <span>Your Pending Actions <span style={{ color: '#c8401a' }}>({pending.length})</span></span>
             <Btn sm onClick={() => go('orders')}>All orders →</Btn>
           </div>
           {pending.length === 0
-            ? <div style={{ color: '#aaa', fontSize: 13, padding: '16px 0' }}>✓ No pending actions.</div>
+            ? <div style={{ background: '#f5f3ee', borderRadius: 10, padding: '16px', fontSize: 13, color: '#888', textAlign: 'center' }}>✓ No pending actions for you right now.</div>
             : pending.map(o => (
               <div key={o.id} onClick={() => openOrder(o.id)}
-                style={{ background: '#fff', border: '0.5px solid #c8401a', borderRadius: 10, padding: '12px 14px', marginBottom: 8, cursor: 'pointer' }}>
-                <div style={{ fontWeight: 500 }}>{o.customer}</div>
-                <div style={{ fontSize: 12, color: '#888', marginTop: 2 }}>{o.product} · {o.id}</div>
-                <div style={{ marginTop: 6, fontSize: 12, color: '#c8401a', fontWeight: 500 }}>→ {ST[o.status]?.lbl}</div>
+                style={{ background: '#fff', border: '1px solid #c8401a', borderRadius: 10, padding: '14px 16px', marginBottom: 10, cursor: 'pointer' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+                  <div>
+                    <div style={{ fontWeight: 600, fontSize: 14 }}>{o.customer}</div>
+                    <div style={{ fontSize: 12, color: '#888', marginTop: 2 }}>{o.product} · {o.id}</div>
+                  </div>
+                  <span style={{ fontSize: 10, background: '#fff0eb', color: '#c8401a', padding: '3px 8px', borderRadius: 4, fontWeight: 600 }}>Action needed</span>
+                </div>
+                <div style={{ background: '#fff0eb', borderRadius: 6, padding: '8px 10px', fontSize: 12, color: '#c8401a', fontWeight: 500 }}>
+                  → {ST[o.status]?.lbl} — click to open
+                </div>
               </div>
             ))
           }
@@ -388,12 +395,14 @@ function Orders({ orders, user, setOrders, open, addLog }) {
   const create = ({ customer, product, qty, date }) => {
     const o = {
       id: `ORD-${String(orders.length + 1).padStart(3,'0')}`,
-      customer, product, qty, status: 'tender_received', tender: date,
+      customer, product, qty,
+      status: 'costing_pending_production', // skip tender_received — goes straight to Production
+      tender: date,
       costing: { pr: null, mr: null, al: null },
       po: null, alA: null, prod: null, dispatches: [], invoice: null, log: [],
     }
     setOrders(os => [o, ...os])
-    addLog(o.id, 'Order Created')
+    addLog(o.id, 'Order Created — sent to Production for costing')
     setShowNew(false)
     setSuccess(o)
   }
